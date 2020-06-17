@@ -84,14 +84,15 @@ defmodule Machinery.Transition do
   Function resposible for triggering transitions persistence.
   This is meant to be for internal use only.
   """
-  @spec log_transition(struct, atom, module) :: struct
-  def log_transition(struct, state, module) do
+  @spec log_transition(struct, atom, module, map) :: struct
+  def log_transition(struct, state, module, metadata) do
     run_or_fallback(
-      &module.log_transition/2,
+      &module.log_transition/3,
       &log_transition_fallback/4,
       struct,
       state,
-      module._field()
+      module._field(),
+      metadata
     )
   end
 
@@ -112,6 +113,13 @@ defmodule Machinery.Transition do
   # rescue for a couple of specific Exceptions and passes it forward
   # to the callback, that will re-raise it if not related to
   # guard_transition nor before | after call backs
+  defp run_or_fallback(func, callback, struct, state, field, metadata ) do
+    func.(struct, state, metadata)
+  rescue
+    error in UndefinedFunctionError -> callback.(struct, state, error, field)
+    error in FunctionClauseError -> callback.(struct, state, error, field)
+  end
+
   defp run_or_fallback(func, callback, struct, state, field) do
     func.(struct, state)
   rescue
@@ -128,7 +136,7 @@ defmodule Machinery.Transition do
   end
 
   defp log_transition_fallback(struct, _state, error, _field) do
-    if error.function == :log_transition && error.arity == 2 do
+    if error.function == :log_transition && error.arity == 3 do
       struct
     else
       raise error

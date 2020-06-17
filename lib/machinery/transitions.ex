@@ -20,7 +20,7 @@ defmodule Machinery.Transitions do
   end
 
   @doc false
-  def handle_call({:run, struct, state_machine_module, next_state}, _from, states) do
+  def handle_call({:run, struct, state_machine_module, next_state, metadata}, _from, states) do
     initial_state = state_machine_module._machinery_initial_state()
     transitions = state_machine_module._machinery_transitions()
     state_field = state_machine_module._field()
@@ -48,7 +48,7 @@ defmodule Machinery.Transitions do
         struct = struct
           |> Transition.before_callbacks(next_state, state_machine_module)
           |> Transition.persist_struct(next_state, state_machine_module)
-          |> Transition.log_transition(next_state, state_machine_module)
+          |> Transition.log_transition(next_state, state_machine_module, metadata)
           |> Transition.after_callbacks(next_state, state_machine_module)
         {:ok, struct}
     end
